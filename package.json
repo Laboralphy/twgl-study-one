@@ -5,7 +5,7 @@
   "main": "webpack.config.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "pm2-serve": "pm2 serve ./public --name static-app --no-daemon",
+    "pm2-serve": "pm2 serve ./public --name static-app",
     "pm2-stop": "pm2 stop static-app",
     "watch": "webpack --watch"
   },

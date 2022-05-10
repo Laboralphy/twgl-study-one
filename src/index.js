@@ -4,10 +4,21 @@ import { autofetchShaderScripts } from './libs/autofetch-shader-scripts'
 let canvas
 let gl
 let bgProgramInfo
-let redTriangleProgramInfo
+let redSquareProgramInfo
 let programInfo
 let bufferInfo
 let bufferInfo2
+
+function createRectObject (w, h) {
+    return [
+        0, 0, 0,
+        0, h, 0,
+        w, h, 0,
+        0, 0, 0,
+        w, h, 0,
+        w, 0, 0
+    ]
+}
 
 async function init () {
     canvas = document.querySelector('#screen')
@@ -16,9 +27,9 @@ async function init () {
         const sProgress = (progress * 100 | 0).toString() + '%'
         console.log(sProgress, script.id)
     })
-    bgProgramInfo = twgl.createProgramInfo(gl, ["triangles", "horloge"])
-    redTriangleProgramInfo = twgl.createProgramInfo(gl, ["triangles", "all-red"])
-    programInfo = bgProgramInfo
+    bgProgramInfo = twgl.createProgramInfo(gl, ["triangles", "bgcolor-gray-20"])
+    redSquareProgramInfo = twgl.createProgramInfo(gl, ["v-sprite", "f-sprite"])
+    programInfo = [bgProgramInfo, redSquareProgramInfo]
     const arrays = {
         position: [
             -1, -1, 0,
@@ -30,11 +41,7 @@ async function init () {
         ],
     };
     const arrays2 = {
-        position: [
-            -0.5, -0.5, 1,
-            0.5, -0.5, 1,
-            -0.5, 0.5, 1
-        ],
+        vertices: createRectObject(128, 64)
     };
 
     bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
@@ -48,24 +55,33 @@ function render(time) {
     const dNow = new Date()
     const nSeconds = dNow.getHours() * 3600 + dNow.getMinutes() * 60 + dNow.getSeconds()
 
-    const uniforms = {
+    const uniforms1 = {
         time: time * 0.001,
         date: [0, 0, 0, nSeconds],
         resolution: [gl.canvas.width, gl.canvas.height],
     };
 
+    const uniforms2 = {
+        time: time * 0.001,
+        date: [0, 0, 0, nSeconds],
+        reference: [0, 0],
+        resolution: [gl.canvas.width, gl.canvas.height],
+        f_resolution: [gl.canvas.width, gl.canvas.height],
+        position: [300, 100, 1],
+        sprite_position: [300, 100],
+        sprite_size: [128, 64]
+    };
+
     gl.useProgram(bgProgramInfo.program);
     twgl.setBuffersAndAttributes(gl, bgProgramInfo, bufferInfo);
-    twgl.setUniforms(bgProgramInfo, uniforms);
+    twgl.setUniforms(bgProgramInfo, uniforms1);
     twgl.drawBufferInfo(gl, bufferInfo);
 
-    /*
-    gl.useProgram(redTriangleProgramInfo.program);
-    twgl.setBuffersAndAttributes(gl, redTriangleProgramInfo, bufferInfo2);
+    gl.useProgram(redSquareProgramInfo.program);
+    twgl.setBuffersAndAttributes(gl, redSquareProgramInfo, bufferInfo2);
+    twgl.setUniforms(redSquareProgramInfo, uniforms2);
     twgl.drawBufferInfo(gl, bufferInfo2);
 
-
-     */
     window.requestAnimationFrame(render);
 }
 

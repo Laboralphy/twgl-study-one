@@ -41,7 +41,7 @@ export async function autofetchShaderScripts (pProgress = null) {
                 }
                 resolve(oScript) // promise is resolve
             } catch (e) {
-                reject(e) // an error occured while fetching src... promise rejected
+                reject(e) // an error occurred while fetching src... promise rejected
             }
         })
         // adding this promise to a list

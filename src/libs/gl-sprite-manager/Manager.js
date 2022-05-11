@@ -1,7 +1,7 @@
 import EventEmitter from 'events'
 import * as twgl from "twgl.js";
+const { m4, v3 } = twgl
 
-import m4 from './tools/m4'
 import Sprite from "./Sprite";
 
 import { autofetchShaderScripts } from './tools/auto-fetch-shader-scripts'
@@ -25,7 +25,20 @@ class Manager {
             matrix: null,
             alpha: null
         }
+        this._zoom = {
+            x: 1,
+            y: 1
+        }
+        this._mOrtho = null
         this._layers = []
+    }
+
+    get gl () {
+        return this._gl
+    }
+
+    get zoom () {
+        return this._zoom
     }
 
     get textures () {
@@ -41,6 +54,7 @@ class Manager {
     }
 
     linkLayer (oLayer) {
+        oLayer.init(this)
         this._layers.push(oLayer)
         this._layers.sort((a, b) => b.z - a.z)
     }
@@ -170,7 +184,9 @@ class Manager {
         const gl = this._gl
         const texture = twgl.createTexture(gl, {
             src: oImage,
-            mag: gl.NEAREST
+            mag: gl.NEAREST,
+            wrapS: gl.CLAMP_TO_EDGE,
+            wrapT: gl.CLAMP_TO_EDGE
         });
         const textureInfo = {
             width: oImage.width,
@@ -196,15 +212,6 @@ class Manager {
         }
     }
 
-    async loadImageAndCreateTextureInfo (url) {
-        const r = url.match(/([^\/]+)\.(png|jpg|gif)$/i)
-        const sTextureId = !!r ? r[1] : ''
-        const oImage = await this.loadImage(url)
-        const textureInfo = this.createTextureInfo(oImage)
-        this._textures[sTextureId] = textureInfo
-        return textureInfo;
-    }
-
     renderSprites (xOffset, yOffset, sprites) {
         sprites.forEach(sprite => {
             const ti = sprite.textureInfo
@@ -227,9 +234,17 @@ class Manager {
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
         // Clear the canvas
-        gl.clearColor(0, 0, 0, 0);
+        gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        this._mOrtho = m4.ortho(
+            0,
+            gl.canvas.clientWidth / this._zoom.x,
+            gl.canvas.clientHeight / this._zoom.y,
+            0,
+            -1,
+            1
+        );
         this._layers.forEach(l => l.render(this))
     }
 
@@ -237,17 +252,23 @@ class Manager {
     // with them so we'll pass in the width and height of the texture
     drawImage (tex, texWidth, texHeight, dstX, dstY, dstWidth, dstHeight, options = {}) {
         const gl = this._gl
-        if (options.add) {
-            gl.blendFunc(gl.ONE, gl.ONE);
-        } else {
-            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        switch (options.blend) {
+            case 1: {
+                gl.blendFunc(gl.ONE, gl.ONE);
+                break;
+            }
+
+            default: {
+                gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+                break;
+            }
         }
         const textureLocation = this._uniforms.texture
         const matrixLocation = this._uniforms.matrix
         const alphaLocation = this._uniforms.alpha
 
         const fAlpha = options.alpha
-        const fRotation = options.rotation || 0
+        const fRotation = options.angle || 0
 
         if (dstWidth === undefined) {
             dstWidth = texWidth;
@@ -272,20 +293,20 @@ class Manager {
         gl.bindTexture(gl.TEXTURE_2D, tex);
 
         // this matrix will convert from pixels to clip space
-        let matrix = m4.orthographic(
-            0, gl.canvas.clientWidth, gl.canvas.clientHeight, 0, -1, 1);
-
+        let matrix = m4.copy(this._mOrtho)
         // translate our quad to dstX, dstY
-        matrix = m4.translate(matrix, dstX, dstY, 0);
+        matrix = m4.translate(matrix, v3.create(dstX, dstY, 0));
 
         // Rotation
         if (fRotation) {
-            matrix = m4.zRotate(matrix, fRotation)
+            matrix = m4.translate(matrix, v3.create(options.xRot, options.yRot, 0));
+            matrix = m4.rotateZ(matrix, fRotation)
+            matrix = m4.translate(matrix, v3.create(-options.xRot, -options.yRot, 0));
         }
 
         // scale our 1 unit quad
         // from 1 unit to dstWidth, dstHeight units
-        matrix = m4.scale(matrix, dstWidth, dstHeight, 1);
+        matrix = m4.scale(matrix, v3.create(dstWidth, dstHeight, 1));
 
         // Set the matrix.
         gl.uniformMatrix4fv(matrixLocation, false, matrix);

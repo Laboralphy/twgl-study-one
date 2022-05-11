@@ -20,6 +20,9 @@ class Layer {
 
     render (oManager) {
     }
+
+    init (oManager) {
+    }
 }
 
 export default Layer

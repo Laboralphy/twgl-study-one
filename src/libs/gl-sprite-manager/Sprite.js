@@ -7,6 +7,16 @@ let nSpriteLastId = 0
  * @property width {number}
  * @property height {number}
  * @property texture {WebGlTexture}
+ *
+ * @typedef SpriteOptionRotation {object}
+ * @property x {number} pivot coordinates (x)
+ * @property y {number} pivot coordinates (y)
+ * @property angle {number} rotation angle (rad)
+ *
+ * @typedef SpriteOptions {object}
+ * @property alpha {number} alpha transparency from 0 (transparent) to 1 (full opacity)
+ * @property blend {number} blend mode - 0=normal 1=additive
+ * @property rotation {SpriteOptionRotation}
  */
 
 /**
@@ -22,7 +32,8 @@ class Sprite {
         this._z = 0
         this._xRef = 0
         this._yRef = 0
-        this._angle = 0
+        this._xPivot = 0
+        this._yPivot = 0
         /**
          * List of defined animations
          * @type {Animation[]}
@@ -41,11 +52,43 @@ class Sprite {
          * @private
          */
         this._textureInfos = []
-        this._options = {
-            alpha: 1,
-            add: false,
-            rotation: 0
+        this._rotation = 0
+        this._alpha = 1
+        this._blend = 0
+    }
+
+    get options () {
+        return {
+            alpha: this.alpha,
+            blend: this.blend,
+            xRot: this._xPivot / this.xScale,
+            yRot: this._yPivot / this.yScale,
+            angle: this._rotation
         }
+    }
+
+    get xPivot() {
+        return this._xPivot;
+    }
+
+    set xPivot(value) {
+        this._xPivot = value;
+    }
+
+    get yPivot() {
+        return this._yPivot;
+    }
+
+    set yPivot(value) {
+        this._yPivot = value;
+    }
+
+    get rotation () {
+        return this._rotation
+    }
+
+    set rotation (value) {
+        this._rotation = value
     }
 
     /**
@@ -84,24 +127,20 @@ class Sprite {
         this._currentAnimationIndex = value
     }
 
-    get options () {
-        return this._options
-    }
-
     get alpha() {
-        return this._options.alpha;
+        return this._alpha;
     }
 
     set alpha(value) {
-        this._options.alpha = value;
+        this._alpha = value;
     }
 
-    defineRef (fx, fy) {
-        if (isNaN(this._width) || isNaN(this._height)) {
-            throw new Error('ERR_INVALID_WIDTH_OR_HEIGHT')
-        }
-        this._xRef = Math.min(this.textureInfo.width - 1, this.textureInfo.width * fx) | 0
-        this._yRef = Math.min(this.textureInfo.height - 1, this.textureInfo.height * fy) | 0
+    get blend() {
+        return this._blend;
+    }
+
+    set blend(value) {
+        this._blend = value;
     }
 
     get id() {
@@ -134,6 +173,7 @@ class Sprite {
 
     set width(value) {
         this._width = value;
+        this.xPivot = this.xPivot
     }
 
     get height() {
@@ -142,6 +182,7 @@ class Sprite {
 
     set height(value) {
         this._height = value;
+        this.yPivot = this.yPivot
     }
 
     get z() {
@@ -170,7 +211,7 @@ class Sprite {
     }
 
     set xRef(value) {
-        this._xRef = value;
+        this._xRef = Math.min(this.textureInfo.width - 1, value) | 0
     }
 
     get yRef() {
@@ -178,7 +219,7 @@ class Sprite {
     }
 
     set yRef(value) {
-        this._yRef = value;
+        this._yRef = Math.min(this.textureInfo.height - 1, value) | 0
     }
 
     get xScale() {
@@ -187,6 +228,7 @@ class Sprite {
 
     set xScale(value) {
         this._width = this.textureInfo.width * value
+        this.xPivot = this.xPivot
     }
 
     get yScale() {
@@ -195,6 +237,11 @@ class Sprite {
 
     set yScale(value) {
         this._height = this.textureInfo.height * value
+        this.yPivot = this.yPivot
+    }
+
+    set scale (value) {
+        this.xScale = this.yScale = value
     }
 }
 

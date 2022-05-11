@@ -1,4 +1,4 @@
-class M4 {
+export default class M4 {
     static translation (tx, ty, tz) {
         return [
             1,  0,  0,  0,
@@ -150,5 +150,3 @@ class M4 {
         ];
     }
 }
-
-export default M4

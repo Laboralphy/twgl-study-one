@@ -1,8 +1,8 @@
-import ViewPort from "./view-port";
+import { View } from './geometry'
 
 class Layer {
     constructor () {
-        this._viewport = new ViewPort()
+        this._view = new View()
         this._z = 0
     }
 
@@ -14,8 +14,8 @@ class Layer {
         this._z = value
     }
 
-    get viewport () {
-        return this._viewport
+    get view () {
+        return this._view
     }
 
     render (oManager) {

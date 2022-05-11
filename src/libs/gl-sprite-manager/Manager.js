@@ -1,9 +1,16 @@
-import { autofetchShaderScripts } from '../autofetch-shader-scripts'
 import EventEmitter from 'events'
 import * as twgl from "twgl.js";
-import m4 from './m4'
-import Sprite from "./sprite";
 
+import m4 from './tools/m4'
+import Sprite from "./Sprite";
+
+import { autofetchShaderScripts } from './tools/auto-fetch-shader-scripts'
+import { loadImage } from './tools/load-image'
+import { cropImage } from "./tools/crop-image"
+
+/**
+ * TODO Filtrage de l'image par shader : effets de lumière, distorsion,
+ */
 class Manager {
     constructor () {
         this._events = new EventEmitter()
@@ -11,6 +18,7 @@ class Manager {
         this._sprites = []
         this._programs = {}
         this._textures = {}
+        this._images = {}
         this._vao = null
         this._uniforms = {
             texture: null,
@@ -49,6 +57,10 @@ class Manager {
             throw new Error('ERR_NO_WEBGL_FOR_YOU')
         }
         const gl = this._gl
+
+        // gl setup
+        gl.enable(gl.BLEND);
+
         // fetching shaders
         await autofetchShaderScripts(({ progress, script }) => {
             this._events.emit('shader-loading', { progress, script })
@@ -153,70 +165,35 @@ class Manager {
         return programInfo
     }
 
-    /**
-     * Asynchronously loads an image and return the HTMLImageElement object
-     * @param src {string} image location
-     * @returns {Promise<HTMLImageElement>}
-     */
-    loadImage (src) {
-        return new Promise((resolve, reject) => {
-            /**
-             * @type {HTMLImageElement}
-             */
-            const oImage = new Image();
-            oImage.addEventListener('load', () => {
-                resolve(oImage)
-            })
-            oImage.addEventListener('error', () => {
-                reject(new Error('ERR_IMAGE_NOT_FOUND ' + src))
-            })
-            oImage.src = src
-        })
-    }
-
-    crop (oImage, x, y, width, height) {
-        x = x || 0
-        y = y || 0
-        width = width || oImage.width
-        height = height || oImage.height
-        const oCanvas = document.createElement('canvas')
-        oCanvas.width = width
-        oCanvas.height = height
-        const ctx = oCanvas.getContext('2d')
-        ctx.drawImage(oImage, x, y, width, height, 0, 0, width, height)
-        return oCanvas
-    }
-
     createTextureInfo (oImage, x, y, width, height) {
-        oImage = this.crop(oImage, x, y, width, height)
+        oImage = cropImage(oImage, x, y, width, height)
         const gl = this._gl
-        const tex = twgl.createTexture(gl, {
+        const texture = twgl.createTexture(gl, {
             src: oImage,
             mag: gl.NEAREST
         });
-        /*
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-
-        // Fill the texture with a 1x1 blue pixel.
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-            new Uint8Array([0, 0, 255, 255]));
-
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-*/
         const textureInfo = {
-            width: 1,   // we don't know the size until it loads
-            height: 1,
-            texture: tex,
-        };
-
-        textureInfo.width = oImage.width;
-        textureInfo.height = oImage.height;
+            width: oImage.width,
+            height: oImage.height,
+            texture
+        }
         gl.bindTexture(gl.TEXTURE_2D, textureInfo.texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, oImage);
         gl.generateMipmap(gl.TEXTURE_2D);
 
         return textureInfo;
+    }
+
+    /**
+     * @param url {string}
+     * @returns {Promise<HTMLImageElement|*>}
+     */
+    async loadImage (url) {
+        if (url in this._images) {
+            return this._images[url]
+        } else {
+            return this._images[url] = await loadImage(url)
+        }
     }
 
     async loadImageAndCreateTextureInfo (url) {
@@ -260,11 +237,17 @@ class Manager {
     // with them so we'll pass in the width and height of the texture
     drawImage (tex, texWidth, texHeight, dstX, dstY, dstWidth, dstHeight, options = {}) {
         const gl = this._gl
+        if (options.add) {
+            gl.blendFunc(gl.ONE, gl.ONE);
+        } else {
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        }
         const textureLocation = this._uniforms.texture
         const matrixLocation = this._uniforms.matrix
         const alphaLocation = this._uniforms.alpha
 
-        const fAlpha = options.alpha || 1
+        const fAlpha = options.alpha
+        const fRotation = options.rotation || 0
 
         if (dstWidth === undefined) {
             dstWidth = texWidth;
@@ -295,6 +278,11 @@ class Manager {
         // translate our quad to dstX, dstY
         matrix = m4.translate(matrix, dstX, dstY, 0);
 
+        // Rotation
+        if (fRotation) {
+            matrix = m4.zRotate(matrix, fRotation)
+        }
+
         // scale our 1 unit quad
         // from 1 unit to dstWidth, dstHeight units
         matrix = m4.scale(matrix, dstWidth, dstHeight, 1);
@@ -311,11 +299,20 @@ class Manager {
         gl.drawArrays(gl.TRIANGLES, offset, count);
     }
 
-    createSprite (textureInfo) {
+    /**
+     * @param oImage {HTMLImageElement|HTMLCanvasElement}
+     * @param width {number}
+     * @param height {number}
+     * @param aTiles {{ x: number, y:  number }[]}
+     * @returns {Sprite}
+     */
+    createSprite (oImage, width, height, aTiles) {
         const oSprite = new Sprite()
-        oSprite.textureInfo = textureInfo
-        oSprite.width = textureInfo.width
-        oSprite.height = textureInfo.height
+        oSprite.textureInfos = aTiles.map(({ x, y }) => {
+            return this.createTextureInfo(oImage, x, y, width, height)
+        })
+        oSprite.width = width
+        oSprite.height = height
         this._sprites.push(oSprite)
         return oSprite
     }

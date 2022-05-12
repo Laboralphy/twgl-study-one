@@ -22,7 +22,25 @@ class SpriteLayer extends Layer {
     }
 
     rectInRect(ax, ay, aw, ah, bx, by, bw, bh) {
+        const sx = this.cmpSegment(ax, ax + aw - 1, bx, bx + bw - 1)
+        const sy = this.cmpSegment(ay, ay + ah - 1, by, by + bh - 1)
 
+    }
+
+    cmpPointRect (x, y, rx, ry, rw, rh) {
+        const cx = this.cmpRange(x, rx, rx + rw - 1)
+        const cy = this.cmpRange(y, ry, ry + rh - 1)
+        switch (cx * 10 + cy) {
+            case 11: return 7
+            case 12: return 4
+            case 13: return 1
+            case 21: return 8
+            case 22: return 5
+            case 23: return 2
+            case 31: return 9
+            case 32: return 6
+            case 33: return 3
+        }
     }
 
     rectInRect2(ax, ay, aw, ah, bx, by, bw, bh) {
@@ -38,6 +56,7 @@ class SpriteLayer extends Layer {
         console.log('ay2 < by', ay2, by, ay2 < by)
         const bOverlap = !(ax < bx2 && ax2 > bx &&
             ay > by2 && ay2 < by)
+        console.log(ax, ay, ax2, ay2, 'IN', bx, by, bx2, by2, '?', bOverlap)
         console.log(ax, ay, aw, ah, 'IN', bx, by, bw, bh, '?', bOverlap)
         console.groupEnd('rectInRect')
         return bOverlap;
@@ -51,7 +70,7 @@ class SpriteLayer extends Layer {
         this
             ._sprites
             .filter(sprite => {
-                const bVisible = this.rectInRect(
+                const bVisible = this.rectInRect2(
                     sprite.x,
                     sprite.y,
                     sprite.width,

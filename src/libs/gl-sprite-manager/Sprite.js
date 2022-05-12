@@ -57,16 +57,6 @@ class Sprite {
         this._blend = 0
     }
 
-    get options () {
-        return {
-            alpha: this.alpha,
-            blend: this.blend,
-            xRot: this._xPivot / this.xScale,
-            yRot: this._yPivot / this.yScale,
-            angle: this._rotation
-        }
-    }
-
     get xPivot() {
         return this._xPivot;
     }

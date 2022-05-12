@@ -10,8 +10,8 @@ async function init () {
     const oTombTI = await oManager.loadImage('assets/textures/sprites/TMS1A0.png')
 
     const oSprite1 = oManager.createSprite(oTombTI, 41, 53, [{ x: 0, y: 0 }])
-    oSprite1.x = 200
-    oSprite1.y = 200
+    oSprite1.x = -220
+    oSprite1.y = -550
     oSprite1.xScale = 1
     oSprite1.yScale = 1
     oSprite1.xPivot = 41 * 0.5
@@ -21,8 +21,8 @@ async function init () {
 
     const oLayer = new SpriteLayer()
     oLayer.view.position.x = 0
-    oLayer.view.width = 1000
-    oLayer.view.height = 1000
+    oLayer.view.width = 400
+    oLayer.view.height = 400
     oManager.linkLayer(oLayer)
     oLayer.linkSprite(oSprite1)
 

@@ -212,22 +212,6 @@ class Manager {
         }
     }
 
-    renderSprites (xOffset, yOffset, sprites) {
-        sprites.forEach(sprite => {
-            const ti = sprite.textureInfo
-            this.drawImage(
-                ti.texture,
-                ti.width,
-                ti.height,
-                sprite.x + xOffset - sprite.xRef / sprite.xScale,
-                sprite.y + yOffset - sprite.yRef / sprite.yScale,
-                sprite.width,
-                sprite.height,
-                sprite.options
-            )
-        })
-    }
-
     render () {
         const gl = this._gl
         twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -248,8 +232,28 @@ class Manager {
         this._layers.forEach(l => l.render(this))
     }
 
-    // Unlike images, textures do not have a width and height associated
-    // with them so we'll pass in the width and height of the texture
+    /**
+     * @typedef DrawImageOptions {object}
+     * @property blend {number} blend method 0: normal ; 1: additive
+     * @property alpha {number} opacity : 0: transparent, 1: full opacity
+     * @property xRot {number} rotation pivot coords x
+     * @property yRot {number} rotation pivot coords y
+     * @property angle {number} rotation angle value
+     * @property xGlobal {number}
+     * @property yGlobal {number}
+     * @property wTex {number}
+     * @property hTex {number}
+     *
+     *
+     * @param tex
+     * @param texWidth
+     * @param texHeight
+     * @param dstX
+     * @param dstY
+     * @param dstWidth
+     * @param dstHeight
+     * @param options
+     */
     drawImage (tex, texWidth, texHeight, dstX, dstY, dstWidth, dstHeight, options = {}) {
         const gl = this._gl
         switch (options.blend) {

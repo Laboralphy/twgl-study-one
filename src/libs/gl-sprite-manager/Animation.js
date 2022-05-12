@@ -104,6 +104,18 @@ class Animation {
 	get index () {
 		return this._index
 	}
+
+	get frame () {
+		return this._frame
+	}
+
+	get frozen() {
+		return this._frozen;
+	}
+
+	set frozen(value) {
+		this._frozen = value;
+	}
 }
 
 export default Animation;

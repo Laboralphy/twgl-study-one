@@ -102,6 +102,14 @@ class Sprite {
     }
 
     /**
+     * all defined animations
+     * @returns {Animation[]}
+     */
+    get animations () {
+        return this._animations
+    }
+
+    /**
      * Get the current running animation index
      * @returns {number}
      */
@@ -190,7 +198,7 @@ class Sprite {
     get textureInfo() {
         const a = this.animation
         if (a) {
-            return this._textureInfos[this.animation.index];
+            return this._textureInfos[this.animation.frame];
         } else {
             return this._textureInfos[0]
         }

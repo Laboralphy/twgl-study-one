@@ -1,5 +1,6 @@
 import Manager from './libs/gl-sprite-manager/Manager.js'
 import SpriteLayer from "./libs/gl-sprite-manager/SpriteLayer";
+import Animation from "./libs/gl-sprite-manager/Animation";
 
 const oManager = new Manager()
 
@@ -7,35 +8,69 @@ const aObjects = {}
 
 async function init () {
     await oManager.init({ canvas: document.querySelector('canvas#screen') })
-    const oTombTI = await oManager.loadImage('assets/textures/sprites/TMS1A0.png')
+    const oTombImg = await oManager.loadImage('assets/textures/sprites/TMS1A0.png')
+    const oDungeonImg = await oManager.loadImage('assets/textures/dungeon-0.png')
 
-    const oSprite1 = oManager.createSprite(oTombTI, 41, 53, [{ x: 0, y: 0 }])
-    oSprite1.x = -220
-    oSprite1.y = -550
-    oSprite1.xScale = 1
-    oSprite1.yScale = 1
-    oSprite1.xPivot = 41 * 0.5
-    oSprite1.yPivot = 53 * 0.5
-    oSprite1.xRef = 41 / 2
-    oSprite1.yRef = 53 / 2
+    const oTombSpr = oManager.createSprite(oTombImg, oTombImg.width, oTombImg.height, [
+        { x: 0, y: 0 }
+    ])
+
+    oTombSpr.x = 140
+    oTombSpr.y = 120
+
+    const oTorcheSpr = oManager.createSprite(oDungeonImg, 32, 32, [
+        { x: 4 * 32, y: 0 },
+        { x: 5 * 32, y: 0 },
+        { x: 6 * 32, y: 0 },
+        { x: 7 * 32, y: 0 },
+        { x: 8 * 32, y: 0 }
+    ])
+
+    const oAnim0 = new Animation({
+        start: 0,
+        loop: Animation.LOOP.NONE
+    })
+
+    const oAnim1 = new Animation({
+        start: 1,
+        count: 4,
+        loop: Animation.LOOP.FORWARD,
+        duration: 360
+    })
+
+    oAnim1.frozen = false
+
+    oTorcheSpr.animations[0] = oAnim0
+    oTorcheSpr.animations[1] = oAnim1
+    oTorcheSpr.currentAnimationIndex = 1
+
+    oTorcheSpr.x = 100
+    oTorcheSpr.y = 100
 
     const oLayer = new SpriteLayer()
     oLayer.view.position.x = 0
-    oLayer.view.width = 400
-    oLayer.view.height = 400
+    oLayer.view.position.y = 0
+    oLayer.view.width = 1000
+    oLayer.view.height = 1000
     oManager.linkLayer(oLayer)
-    oLayer.linkSprite(oSprite1)
+    oLayer.linkSprite(oTorcheSpr)
+    oLayer.linkSprite(oTombSpr)
 
-    aObjects.sprite1 = oSprite1
+    aObjects.torch = oTorcheSpr
+    window.aObjects = aObjects
 }
 
-let RENDER_COUNT = 0
+let last_time = 0
+function update (time) {
+    const t = time - last_time
+    last_time = time
+    aObjects.torch.animation.animate(t)
+}
+
 function render(time) {
+    update(time)
     oManager.render()
-    ++RENDER_COUNT
-    if (RENDER_COUNT < 20) {
-        requestAnimationFrame(render)
-    }
+    requestAnimationFrame(render)
 }
 
 async function main () {

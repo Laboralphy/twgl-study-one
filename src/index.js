@@ -35,7 +35,7 @@ async function init () {
         start: 1,
         count: 4,
         loop: Animation.LOOP.FORWARD,
-        duration: 360
+        duration: 180
     })
 
     oAnim1.frozen = false

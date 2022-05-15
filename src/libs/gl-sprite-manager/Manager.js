@@ -23,7 +23,14 @@ class Manager {
         this._uniforms = {
             texture: null,
             matrix: null,
-            alpha: null
+            alpha: null,
+            amb_active: null,
+            amb_pigment: null,
+            ls_active: null,
+            ls_pigment: null,
+            ls_position: null,
+            ls_radiusMin: null,
+            ls_radiusMax: null
         }
         this._zoom = {
             x: 1,
@@ -91,6 +98,13 @@ class Manager {
         this._uniforms.matrix = gl.getUniformLocation(progDrawImage.program, 'u_matrix');
         this._uniforms.texture = gl.getUniformLocation(progDrawImage.program, 'u_texture');
         this._uniforms.alpha = gl.getUniformLocation(progDrawImage.program, 'u_alpha');
+        this._uniforms.amb_active = gl.getUniformLocation(progDrawImage.program, 'u_amb_active')
+        this._uniforms.amb_pigment = gl.getUniformLocation(progDrawImage.program, 'u_amb_pigment')
+        this._uniforms.ls_active = gl.getUniformLocation(progDrawImage.program, 'u_ls_active')
+        this._uniforms.ls_pigment = gl.getUniformLocation(progDrawImage.program, 'u_ls_pigment')
+        this._uniforms.ls_position = gl.getUniformLocation(progDrawImage.program, 'u_ls_position')
+        this._uniforms.ls_radiusMin = gl.getUniformLocation(progDrawImage.program, 'u_ls_radiusMin')
+        this._uniforms.ls_radiusMax = gl.getUniformLocation(progDrawImage.program, 'u_ls_radiusMax')
 
         // Create a vertex array object (attribute state)
         const vao = gl.createVertexArray();
@@ -233,6 +247,14 @@ class Manager {
     }
 
     /**
+     * Initialise les uniform correspondant au données des lightsources
+     */
+    initLightSourceUniforms (pigment, position, radiusMin, radiusMax) {
+        const u = this._uniforms
+        // gl.uniform
+    }
+
+    /**
      * @typedef DrawImageOptions {object}
      * @property blend {number} blend method 0: normal ; 1: additive
      * @property alpha {number} opacity : 0: transparent, 1: full opacity
@@ -256,24 +278,11 @@ class Manager {
      */
     drawImage (tex, texWidth, texHeight, dstX, dstY, dstWidth, dstHeight, options = {}) {
         const gl = this._gl
-        switch (options.blend) {
-            case 1: {
-                gl.blendFunc(gl.ONE, gl.ONE);
-                break;
-            }
-
-            default: {
-                gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-                break;
-            }
+        if (options.blend === 1) {
+            gl.blendFunc(gl.ONE, gl.ONE);
+        } else {
+            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         }
-        const textureLocation = this._uniforms.texture
-        const matrixLocation = this._uniforms.matrix
-        const alphaLocation = this._uniforms.alpha
-
-        const fAlpha = options.alpha
-        const fRotation = options.angle || 0
-
         if (dstWidth === undefined) {
             dstWidth = texWidth;
         }
@@ -282,19 +291,18 @@ class Manager {
             dstHeight = texHeight;
         }
 
+        const textureLocation = this._uniforms.texture
+        const matrixLocation = this._uniforms.matrix
+        const alphaLocation = this._uniforms.alpha
+
+        const fAlpha = options.alpha
+        const fRotation = options.angle || 0
+
         gl.useProgram(this._programs.drawImage.program);
 
         // Setup the attributes for the quad
         const vao = this._vao
         gl.bindVertexArray(vao);
-
-        const textureUnit = 0;
-        // The the shader we're putting the texture on texture unit 0
-        gl.uniform1i(textureLocation, textureUnit);
-
-        // Bind the texture to texture unit 0
-        gl.activeTexture(gl.TEXTURE0 + textureUnit);
-        gl.bindTexture(gl.TEXTURE_2D, tex);
 
         // this matrix will convert from pixels to clip space
         let matrix = m4.copy(this._mOrtho)
@@ -311,6 +319,14 @@ class Manager {
         // scale our 1 unit quad
         // from 1 unit to dstWidth, dstHeight units
         matrix = m4.scale(matrix, v3.create(dstWidth, dstHeight, 1));
+
+        const textureUnit = 0;
+        // The the shader we're putting the texture on texture unit 0
+        gl.uniform1i(textureLocation, textureUnit);
+
+        // Bind the texture to texture unit 0
+        gl.activeTexture(gl.TEXTURE0 + textureUnit);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
 
         // Set the matrix.
         gl.uniformMatrix4fv(matrixLocation, false, matrix);

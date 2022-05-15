@@ -16,22 +16,10 @@ class Manager {
         this._events = new EventEmitter()
         this._gl = null
         this._sprites = []
-        this._programs = {}
+        this._programInfo = {}
+        this._bufferInfo = {}
         this._textures = {}
         this._images = {}
-        this._vao = null
-        this._uniforms = {
-            texture: null,
-            matrix: null,
-            alpha: null,
-            amb_active: null,
-            amb_pigment: null,
-            ls_active: null,
-            ls_pigment: null,
-            ls_position: null,
-            ls_radiusMin: null,
-            ls_radiusMax: null
-        }
         this._zoom = {
             x: 1,
             y: 1
@@ -73,7 +61,7 @@ class Manager {
      */
     async init ({ canvas }) {
         this._canvas = canvas
-        this._gl = canvas.getContext('webgl2')
+        this._gl = this._canvas.getContext('webgl2')
         if (!this._gl) {
             throw new Error('ERR_NO_WEBGL_FOR_YOU')
         }
@@ -87,110 +75,15 @@ class Manager {
             this._events.emit('shader-loading', { progress, script })
         })
 
-        // compiling drawimage shaders
-        const progDrawImage = this.compileProgram('drawImage', 'v-draw-image', 'f-draw-image')
+        const arrays = {
+            a_position: {
+                numComponents: 2,
+                data: [-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]
+            }
+        }
 
-        // draw image : look up where the vertex data needs to go.
-        const positionAttributeLocation = gl.getAttribLocation(progDrawImage.program, 'a_position');
-        const texcoordAttributeLocation = gl.getAttribLocation(progDrawImage.program, 'a_texcoord');
-
-        // lookup uniforms
-        this._uniforms.matrix = gl.getUniformLocation(progDrawImage.program, 'u_matrix');
-        this._uniforms.texture = gl.getUniformLocation(progDrawImage.program, 'u_texture');
-        this._uniforms.alpha = gl.getUniformLocation(progDrawImage.program, 'u_alpha');
-        this._uniforms.amb_active = gl.getUniformLocation(progDrawImage.program, 'u_amb_active')
-        this._uniforms.amb_pigment = gl.getUniformLocation(progDrawImage.program, 'u_amb_pigment')
-        this._uniforms.ls_active = gl.getUniformLocation(progDrawImage.program, 'u_ls_active')
-        this._uniforms.ls_pigment = gl.getUniformLocation(progDrawImage.program, 'u_ls_pigment')
-        this._uniforms.ls_position = gl.getUniformLocation(progDrawImage.program, 'u_ls_position')
-        this._uniforms.ls_radiusMin = gl.getUniformLocation(progDrawImage.program, 'u_ls_radiusMin')
-        this._uniforms.ls_radiusMax = gl.getUniformLocation(progDrawImage.program, 'u_ls_radiusMax')
-
-        // Create a vertex array object (attribute state)
-        const vao = gl.createVertexArray();
-        this._vao = vao
-
-        // and make it the one we're currently working with
-        gl.bindVertexArray(vao);
-
-        // create the position buffer, make it the current ARRAY_BUFFER
-        // and copy in the color values
-        const positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        // Put a unit quad in the buffer
-        const positions = [
-            0, 0,
-            0, 1,
-            1, 0,
-            1, 0,
-            0, 1,
-            1, 1,
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-        // Turn on the attribute
-        gl.enableVertexAttribArray(positionAttributeLocation);
-
-        // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-        this.createVertexAttribPointer({
-            attributeLocation: positionAttributeLocation,
-            size: 2, // 2 components per iteration
-            type: gl.FLOAT, // the data is 32bit floats
-            normalize: false, // don't normalize the data
-            stride: 0, // 0 = move forward size * sizeof(type) each iteration to get the next position
-            offset: 0 // start at the beginning of the buffer
-        })
-
-        // create the texcoord buffer, make it the current ARRAY_BUFFER
-        // and copy in the texcoord values
-        const texcoordBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-        // Put texcoords in the buffer
-        const texcoords = [
-            0, 0,
-            0, 1,
-            1, 0,
-            1, 0,
-            0, 1,
-            1, 1,
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
-
-        // Turn on the attribute
-        gl.enableVertexAttribArray(texcoordAttributeLocation);
-
-        // Tell the attribute how to get data out of texcoordBuffer (ARRAY_BUFFER)
-        this.createVertexAttribPointer({
-            attributeLocation: texcoordAttributeLocation,
-            size: 2, // 2 components per iteration
-            type: gl.FLOAT, // the data is 32bit floats
-            normalize: false, // convert from 0-255 to 0.0-1.0
-            stride: 0, // 0 = move forward size * sizeof(type) each iteration to get the next color
-            offset: 0 // start at the beginning of the buffer
-        })
-    }
-
-    createVertexAttribPointer ({ attributeLocation, size, type, normalize, stride, offset }) {
-        this._gl.vertexAttribPointer(
-            attributeLocation,
-            size,
-            type,
-            normalize,
-            stride,
-            offset
-        )
-    }
-
-    /**
-     * Compile a vs script and a fs script and returns the program info
-     * @param id {string} program identifier
-     * @param vsScript {string}
-     * @param fsScript {string}
-     */
-    compileProgram (id, vsScript, fsScript) {
-        const programInfo = twgl.createProgramInfo(this._gl, [vsScript, fsScript])
-        this._programs[id] = programInfo
-        return programInfo
+        this._programInfo.drawImage = twgl.createProgramInfo(gl, ['v-test', 'f-test'])
+        this._bufferInfo.drawImage = twgl.createBufferInfoFromArrays(gl, arrays)
     }
 
     createTextureInfo (oImage, x, y, width, height) {
@@ -235,22 +128,21 @@ class Manager {
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        this._mOrtho = m4.ortho(
-            0,
-            gl.canvas.clientWidth / this._zoom.x,
-            gl.canvas.clientHeight / this._zoom.y,
-            0,
-            -1,
-            1
-        );
-        this._layers.forEach(l => l.render(this))
+
+        gl.useProgram(this._programInfo.drawImage.program);
+        twgl.setBuffersAndAttributes(gl, this._programInfo.drawImage, this._bufferInfo.drawImage)
+        twgl.setUniforms(
+            this._programInfo.drawImage, {
+            }
+        )
+        twgl.drawBufferInfo(this._gl, this._bufferInfo.drawImage)
     }
 
     /**
      * Initialise les uniform correspondant au données des lightsources
      */
     initLightSourceUniforms (pigment, position, radiusMin, radiusMax) {
-        const u = this._uniforms
+        // const u = this._uniforms
         // gl.uniform
     }
 
@@ -277,6 +169,10 @@ class Manager {
      * @param options
      */
     drawImage (tex, texWidth, texHeight, dstX, dstY, dstWidth, dstHeight, options = {}) {
+        dstX = -1000
+        dstY = -1000
+        dstWidth = 5000
+        dstHeight = 5000
         const gl = this._gl
         if (options.blend === 1) {
             gl.blendFunc(gl.ONE, gl.ONE);
@@ -291,18 +187,10 @@ class Manager {
             dstHeight = texHeight;
         }
 
-        const textureLocation = this._uniforms.texture
-        const matrixLocation = this._uniforms.matrix
-        const alphaLocation = this._uniforms.alpha
-
         const fAlpha = options.alpha
         const fRotation = options.angle || 0
 
-        gl.useProgram(this._programs.drawImage.program);
-
-        // Setup the attributes for the quad
-        const vao = this._vao
-        gl.bindVertexArray(vao);
+        gl.useProgram(this._programInfo.drawImage.program);
 
         // this matrix will convert from pixels to clip space
         let matrix = m4.copy(this._mOrtho)
@@ -320,24 +208,15 @@ class Manager {
         // from 1 unit to dstWidth, dstHeight units
         matrix = m4.scale(matrix, v3.create(dstWidth, dstHeight, 1));
 
-        const textureUnit = 0;
-        // The the shader we're putting the texture on texture unit 0
-        gl.uniform1i(textureLocation, textureUnit);
+        twgl.setUniforms(
+            this._programInfo.drawImage, {
+                u_matrix: matrix,
+                u_texture: tex,
+                u_alpha: 1.0
+            }
+        )
 
-        // Bind the texture to texture unit 0
-        gl.activeTexture(gl.TEXTURE0 + textureUnit);
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-
-        // Set the matrix.
-        gl.uniformMatrix4fv(matrixLocation, false, matrix);
-
-        // set alpha
-        gl.uniform1f(alphaLocation, fAlpha)
-
-        // draw the quad (2 triangles, 6 vertices)
-        const offset = 0;
-        const count = 6;
-        gl.drawArrays(gl.TRIANGLES, offset, count);
+        twgl.drawBufferInfo(this._gl, this._bufferInfo.drawImage)
     }
 
     /**

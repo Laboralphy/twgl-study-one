@@ -1,13 +1,13 @@
-#version 300 es
+// we will always pass a 0 to 1 unit quad
+// and then use matrices to manipulate it
+attribute vec4 position;   
 
-in vec4 a_position;
-in vec2 a_texcoord;
+uniform mat4 matrix;
+uniform mat4 textureMatrix;
 
-uniform mat4 u_matrix;
+varying vec2 texcoord;
 
-out vec2 v_texcoord;
-
-void main() {
-  gl_Position = u_matrix * a_position;
-  v_texcoord = a_texcoord;
+void main () {
+  gl_Position = matrix * position;
+  texcoord = (textureMatrix * position).xy;
 }

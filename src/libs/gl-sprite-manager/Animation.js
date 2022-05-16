@@ -15,9 +15,10 @@ class Animation {
 		start = 0,
 		duration = 0,
 		count = 1,
-		loop = 0
+		loop = 0,
+		frozen = false
 	} = {}) {
-		this._frozen = true;
+		this._frozen = frozen;
 		this._start = start; // frame de début
 		this._index = 0; // index de la frame en cours d'affichage
 		this._count = count; // nombre total de frames
@@ -103,6 +104,18 @@ class Animation {
 
 	get index () {
 		return this._index
+	}
+
+	get frame () {
+		return this._frame
+	}
+
+	get frozen() {
+		return this._frozen;
+	}
+
+	set frozen(value) {
+		this._frozen = value;
 	}
 }
 

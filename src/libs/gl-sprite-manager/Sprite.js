@@ -57,16 +57,6 @@ class Sprite {
         this._blend = 0
     }
 
-    get options () {
-        return {
-            alpha: this.alpha,
-            blend: this.blend,
-            xRot: this._xPivot / this.xScale,
-            yRot: this._yPivot / this.yScale,
-            angle: this._rotation
-        }
-    }
-
     get xPivot() {
         return this._xPivot;
     }
@@ -112,6 +102,14 @@ class Sprite {
     }
 
     /**
+     * all defined animations
+     * @returns {Animation[]}
+     */
+    get animations () {
+        return this._animations
+    }
+
+    /**
      * Get the current running animation index
      * @returns {number}
      */
@@ -124,6 +122,9 @@ class Sprite {
      * @param value {number}
      */
     set currentAnimationIndex (value) {
+        if (this._animations[value] === undefined) {
+            throw new Error('Animation #' + value + ' is undefined')
+        }
         this._currentAnimationIndex = value
     }
 
@@ -200,7 +201,7 @@ class Sprite {
     get textureInfo() {
         const a = this.animation
         if (a) {
-            return this._textureInfos[this.animation.index];
+            return this._textureInfos[this.animation.frame];
         } else {
             return this._textureInfos[0]
         }

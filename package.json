@@ -4,7 +4,7 @@
   "description": "",
   "main": "webpack.config.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jasmine tests/*Test.js",
     "pm2-serve": "pm2 serve ./public --name static-app",
     "pm2-stop": "pm2 stop static-app",
     "watch": "webpack --watch"
@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "jasmine": "^4.1.0",
     "webpack": "^5.72.0",
     "webpack-cli": "^4.9.2"
   },

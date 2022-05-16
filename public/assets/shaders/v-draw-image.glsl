@@ -1,13 +1,15 @@
 #version 300 es
 
-in vec4 a_position;
-in vec2 a_texcoord;
+precision mediump float;
+
+in vec4 position;
 
 uniform mat4 u_matrix;
+uniform mat4 u_textureMatrix;
 
-out vec2 v_texcoord;
+out vec2 texcoord;
 
-void main() {
-  gl_Position = u_matrix * a_position;
-  v_texcoord = a_texcoord;
+void main () {
+  gl_Position = u_matrix * position;
+  texcoord = (u_textureMatrix * position).xy;
 }

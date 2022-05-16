@@ -30,16 +30,6 @@ class Animation {
 	  	this._over = false;
 	}
 
-	clone () {
-		return new Animation({
-			start: this._start,
-			duration: this._duration,
-			count: this._count,
-			loop: this._loop,
-			frozen: this._frozen
-		})
-	}
-
 	static get LOOP () {
 		return LOOP_CONSTS
 	}

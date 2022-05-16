@@ -42,7 +42,7 @@ class SpriteLayer extends Layer {
             .sort((a, b) => {
                 return b.z === a.z
                     ? b.id - a.id // pour stabiliser le sort
-                    : b.z - a.z
+                    : a.z - b.z
             })
             .forEach(sprite => {
                 const ti = sprite.textureInfo

@@ -104,7 +104,7 @@ class Manager {
             src: oImage,
             mag: gl.NEAREST,
             wrapS: gl.CLAMP_TO_EDGE,
-            wrapT: gl.CLAMP_TO_EDGE,
+            wrapT: gl.CLAMP_TO_EDGE
 
         });
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -154,7 +154,7 @@ class Manager {
         if (options.blend === 1) {
             gl.blendFunc(gl.ONE, gl.ONE);
         } else {
-            gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         }
         const nRotation = options.angle || 0
         if (srcWidth === undefined) {
@@ -179,7 +179,7 @@ class Manager {
             u_matrix: mat,
             u_textureMatrix: tmat,
             u_texture: tex,
-            u_alpha: options.alpha || 1
+            u_alpha: options.alpha
         };
 
         // these adjust the unit quad to generate texture coordinates

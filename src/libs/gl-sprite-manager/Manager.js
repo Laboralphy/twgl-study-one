@@ -78,6 +78,8 @@ class Manager {
     initDrawImage () {
         const gl = this._gl
         this._programInfo.drawImage = twgl.createProgramInfo(gl, ["v-draw-image", "f-draw-image"]);
+        this._programInfo.drawImageAmbiance = twgl.createProgramInfo(gl, ["v-draw-image", "f-draw-image-ambiance"]);
+        this._programInfo.drawImageLightSources = twgl.createProgramInfo(gl, ["v-draw-image", "f-draw-image-lightsources"]);
 
         // a unit quad
         this._bufferInfo.drawImage = twgl.primitives.createXYQuadBufferInfo(gl);
@@ -141,6 +143,38 @@ class Manager {
         this._layers.forEach(l => l.render(this))
     }
 
+    /**
+     * @typedef Vector2D {number[2]}
+     * @typedef Vector3D {number[3]}
+     * @typedef Vector4D {number[4]}
+     *
+     * @typedef LightSourceSection {object}
+     * @property active {boolean[4]}
+     * @property pigment {Vector3D[4]}
+     * @property position {Vector2D[4]}
+     * @property radiusMin {number[4]}
+     * @property radiusMax {number[4]}
+     *
+     * @typedef DrawImageOptions {object}
+     * @property blend {number}
+     * @property alpha {number}
+     * @property rotation {number}
+     * @property xRot {number}
+     * @property yRot {number}
+     * @property ambiancePigment {number[]}
+     * @property lightSources {LightSourceSection}
+     *
+     * @param texInfo
+     * @param srcX
+     * @param srcY
+     * @param srcWidth
+     * @param srcHeight
+     * @param dstX
+     * @param dstY
+     * @param dstWidth
+     * @param dstHeight
+     * @param options
+     */
     drawImage (
         texInfo,
         srcX, srcY, srcWidth, srcHeight,
@@ -175,13 +209,6 @@ class Manager {
         const mat  = m4.identity();
         const tmat = m4.identity();
 
-        const uniforms = {
-            u_matrix: mat,
-            u_textureMatrix: tmat,
-            u_texture: tex,
-            u_alpha: options.alpha
-        };
-
         // these adjust the unit quad to generate texture coordinates
         // to select part of the src texture
 
@@ -207,7 +234,33 @@ class Manager {
         }
         m4.scale(mat, [dstWidth, dstHeight, 1], mat);
 
-        const p = this._programInfo.drawImage
+        const uniforms = {
+            u_matrix: mat,
+            u_textureMatrix: tmat,
+            u_texture: tex,
+            u_alpha: 'alpha' in options ? options.alpha : 1
+        }
+
+        let sFragmentShader = 'drawImage'
+
+        if (Array.isArray(options.ambiancePigment)) {
+            sFragmentShader = 'drawImageAmbiance'
+            uniforms.u_amb_pigment = options.ambiancePigment
+            if ('lightSources' in options) {
+                /**
+                 * @type {LightSourceSection}
+                 */
+                const ls = options.lightSources
+                sFragmentShader = 'drawImageLightSources'
+                uniforms.u_ls_active = ls.active
+                uniforms.u_ls_position = ls.position
+                uniforms.u_ls_pigment = ls.pigment
+                uniforms.u_ls_radius_min = ls.radiusMin
+                uniforms.u_ls_radius_max = ls.radiusMax
+            }
+        }
+
+        const p = this._programInfo[sFragmentShader]
         const b = this._bufferInfo.drawImage
         gl.useProgram(p.program);
         twgl.setBuffersAndAttributes(gl, p, b);

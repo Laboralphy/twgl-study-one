@@ -1,0 +1,24 @@
+#version 300 es
+
+precision highp float;
+
+in vec2 texcoord;
+
+uniform sampler2D u_texture;
+uniform float u_alpha;
+uniform vec3 u_amb_pigment;
+
+out vec4 outColor;
+
+void main() {
+    if (texcoord.x < 0.0 || texcoord.x > 1.0 || texcoord.y < 0.0 || texcoord.y > 1.0) {
+        discard;
+    }
+    outColor = texture(u_texture, texcoord);
+    outColor = vec4(
+        u_amb_pigment.r * outColor.r,
+        u_amb_pigment.g * outColor.g,
+        u_amb_pigment.b * outColor.b,
+        outColor.a * u_alpha
+    );
+}

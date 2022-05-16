@@ -40,7 +40,7 @@ async function createTorchSprite(oImg) {
     oTorchSpr.rotation = 1
     oTorchSpr.xPivot = 16
     oTorchSpr.yPivot = 16
-    oTorchSpr.alpha = 0.5
+    oTorchSpr.alpha = 1
     return oTorchSpr
 }
 

@@ -55,13 +55,17 @@ class Manager {
     }
 
     initGL () {
-        this._gl = twgl.getWebGLContext(this._canvas)
+        const gl = twgl.getContext(this._canvas)
+        this._gl = gl
         if (!this._gl) {
-            throw new Error('ERR_NO_WEBGL_FOR_YOU')
+            throw new Error('Could not initialize webgl')
         }
-        const gl = this._gl
+        if (!twgl.isWebGL2(this._gl)) {
+            throw new Error('Could not initialize webgl 2')
+        }
         // gl setup
         gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
     }
 
     initShaders () {
@@ -100,8 +104,12 @@ class Manager {
             src: oImage,
             mag: gl.NEAREST,
             wrapS: gl.CLAMP_TO_EDGE,
-            wrapT: gl.CLAMP_TO_EDGE
+            wrapT: gl.CLAMP_TO_EDGE,
+
         });
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, oImage);
+        gl.generateMipmap(gl.TEXTURE_2D);
         return {
             width: oImage.width,
             height: oImage.height,
@@ -168,9 +176,10 @@ class Manager {
         const tmat = m4.identity();
 
         const uniforms = {
-            matrix: mat,
-            textureMatrix: tmat,
-            texture: tex,
+            u_matrix: mat,
+            u_textureMatrix: tmat,
+            u_texture: tex,
+            u_alpha: options.alpha || 1
         };
 
         // these adjust the unit quad to generate texture coordinates
@@ -190,9 +199,11 @@ class Manager {
         m4.translate(mat, [dstX, dstY, 0], mat);
         // Rotation
         if (nRotation) {
-            m4.translate(mat, v3.create(options.xRot, options.yRot, 0), mat);
+            const vPivot = v3.create(options.xRot, options.yRot, 0)
+            const vNegPivot = v3.negate(vPivot)
+            m4.translate(mat, vPivot, mat);
             m4.rotateZ(mat, nRotation, mat)
-            m4.translate(mat, v3.create(-options.xRot, -options.yRot, 0), mat);
+            m4.translate(mat, vNegPivot, mat);
         }
         m4.scale(mat, [dstWidth, dstHeight, 1], mat);
 

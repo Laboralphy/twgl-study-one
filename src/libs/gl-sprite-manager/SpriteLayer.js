@@ -78,8 +78,8 @@ class SpriteLayer extends Layer {
                 oManager.drawImage(
                     ti,
                     0, 0,
-                    sprite.width,
-                    sprite.height,
+                    sprite.textureInfo.width,
+                    sprite.textureInfo.height,
                     xGlobal - vpx,
                     yGlobal - vpy,
                     sprite.width,

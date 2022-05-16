@@ -15,9 +15,10 @@ class Animation {
 		start = 0,
 		duration = 0,
 		count = 1,
-		loop = 0
+		loop = 0,
+		frozen = false
 	} = {}) {
-		this._frozen = true;
+		this._frozen = frozen;
 		this._start = start; // frame de début
 		this._index = 0; // index de la frame en cours d'affichage
 		this._count = count; // nombre total de frames
@@ -27,6 +28,16 @@ class Animation {
 		this._frame = 0; // Frame actuellement affichée
 		this._loopDir = 1; // direction de la boucle (pour yoyo)
 	  	this._over = false;
+	}
+
+	clone () {
+		return new Animation({
+			start: this._start,
+			duration: this._duration,
+			count: this._count,
+			loop: this._loop,
+			frozen: this._frozen
+		})
 	}
 
 	static get LOOP () {

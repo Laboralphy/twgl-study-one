@@ -42,7 +42,7 @@ class SpriteLayer extends Layer {
             .sort((a, b) => {
                 return b.z === a.z
                     ? b.id - a.id // pour stabiliser le sort
-                    : b.z - a.z
+                    : a.z - b.z
             })
             .forEach(sprite => {
                 const ti = sprite.textureInfo
@@ -76,9 +76,10 @@ class SpriteLayer extends Layer {
                     ]
                 }
                 oManager.drawImage(
-                    ti.texture,
-                    ti.width,
-                    ti.height,
+                    ti,
+                    0, 0,
+                    sprite.textureInfo.width,
+                    sprite.textureInfo.height,
                     xGlobal - vpx,
                     yGlobal - vpy,
                     sprite.width,

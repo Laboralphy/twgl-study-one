@@ -122,6 +122,9 @@ class Sprite {
      * @param value {number}
      */
     set currentAnimationIndex (value) {
+        if (this._animations[value] === undefined) {
+            throw new Error('Animation #' + value + ' is undefined')
+        }
         this._currentAnimationIndex = value
     }
 

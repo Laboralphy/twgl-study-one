@@ -16,15 +16,10 @@ class Manager {
         this._events = new EventEmitter()
         this._gl = null
         this._sprites = []
-        this._programs = {}
+        this._programInfo = {}
+        this._bufferInfo = {}
         this._textures = {}
         this._images = {}
-        this._vao = null
-        this._uniforms = {
-            texture: null,
-            matrix: null,
-            alpha: null
-        }
         this._zoom = {
             x: 1,
             y: 1
@@ -59,6 +54,35 @@ class Manager {
         this._layers.sort((a, b) => b.z - a.z)
     }
 
+    initGL () {
+        const gl = twgl.getContext(this._canvas)
+        this._gl = gl
+        if (!this._gl) {
+            throw new Error('Could not initialize webgl')
+        }
+        if (!twgl.isWebGL2(this._gl)) {
+            throw new Error('Could not initialize webgl 2')
+        }
+        // gl setup
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+    }
+
+    initShaders () {
+        // fetching shaders
+        return autofetchShaderScripts(({ progress, script }) => {
+            this._events.emit('shader-loading', { progress, script })
+        })
+    }
+
+    initDrawImage () {
+        const gl = this._gl
+        this._programInfo.drawImage = twgl.createProgramInfo(gl, ["v-draw-image", "f-draw-image"]);
+
+        // a unit quad
+        this._bufferInfo.drawImage = twgl.primitives.createXYQuadBufferInfo(gl);
+    }
+
     /**
      * Initialize WebGL2
      * @param canvas {HTMLCanvasElement}
@@ -66,138 +90,31 @@ class Manager {
      */
     async init ({ canvas }) {
         this._canvas = canvas
-        this._gl = canvas.getContext('webgl2')
-        if (!this._gl) {
-            throw new Error('ERR_NO_WEBGL_FOR_YOU')
-        }
-        const gl = this._gl
-
-        // gl setup
-        gl.enable(gl.BLEND);
-
-        // fetching shaders
-        await autofetchShaderScripts(({ progress, script }) => {
-            this._events.emit('shader-loading', { progress, script })
-        })
-
-        // compiling drawimage shaders
-        const progDrawImage = this.compileProgram('drawImage', 'v-draw-image', 'f-draw-image')
-
-        // draw image : look up where the vertex data needs to go.
-        const positionAttributeLocation = gl.getAttribLocation(progDrawImage.program, 'a_position');
-        const texcoordAttributeLocation = gl.getAttribLocation(progDrawImage.program, 'a_texcoord');
-
-        // lookup uniforms
-        this._uniforms.matrix = gl.getUniformLocation(progDrawImage.program, 'u_matrix');
-        this._uniforms.texture = gl.getUniformLocation(progDrawImage.program, 'u_texture');
-        this._uniforms.alpha = gl.getUniformLocation(progDrawImage.program, 'u_alpha');
-
-        // Create a vertex array object (attribute state)
-        const vao = gl.createVertexArray();
-        this._vao = vao
-
-        // and make it the one we're currently working with
-        gl.bindVertexArray(vao);
-
-        // create the position buffer, make it the current ARRAY_BUFFER
-        // and copy in the color values
-        const positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        // Put a unit quad in the buffer
-        const positions = [
-            0, 0,
-            0, 1,
-            1, 0,
-            1, 0,
-            0, 1,
-            1, 1,
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-        // Turn on the attribute
-        gl.enableVertexAttribArray(positionAttributeLocation);
-
-        // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-        this.createVertexAttribPointer({
-            attributeLocation: positionAttributeLocation,
-            size: 2, // 2 components per iteration
-            type: gl.FLOAT, // the data is 32bit floats
-            normalize: false, // don't normalize the data
-            stride: 0, // 0 = move forward size * sizeof(type) each iteration to get the next position
-            offset: 0 // start at the beginning of the buffer
-        })
-
-        // create the texcoord buffer, make it the current ARRAY_BUFFER
-        // and copy in the texcoord values
-        const texcoordBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-        // Put texcoords in the buffer
-        const texcoords = [
-            0, 0,
-            0, 1,
-            1, 0,
-            1, 0,
-            0, 1,
-            1, 1,
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
-
-        // Turn on the attribute
-        gl.enableVertexAttribArray(texcoordAttributeLocation);
-
-        // Tell the attribute how to get data out of texcoordBuffer (ARRAY_BUFFER)
-        this.createVertexAttribPointer({
-            attributeLocation: texcoordAttributeLocation,
-            size: 2, // 2 components per iteration
-            type: gl.FLOAT, // the data is 32bit floats
-            normalize: false, // convert from 0-255 to 0.0-1.0
-            stride: 0, // 0 = move forward size * sizeof(type) each iteration to get the next color
-            offset: 0 // start at the beginning of the buffer
-        })
-    }
-
-    createVertexAttribPointer ({ attributeLocation, size, type, normalize, stride, offset }) {
-        this._gl.vertexAttribPointer(
-            attributeLocation,
-            size,
-            type,
-            normalize,
-            stride,
-            offset
-        )
-    }
-
-    /**
-     * Compile a vs script and a fs script and returns the program info
-     * @param id {string} program identifier
-     * @param vsScript {string}
-     * @param fsScript {string}
-     */
-    compileProgram (id, vsScript, fsScript) {
-        const programInfo = twgl.createProgramInfo(this._gl, [vsScript, fsScript])
-        this._programs[id] = programInfo
-        return programInfo
+        this.initGL()
+        await this.initShaders()
+        this.initDrawImage()
     }
 
     createTextureInfo (oImage, x, y, width, height) {
-        oImage = cropImage(oImage, x, y, width, height)
+        if (x !== undefined) {
+            oImage = cropImage(oImage, x, y, width, height)
+        }
         const gl = this._gl
         const texture = twgl.createTexture(gl, {
             src: oImage,
             mag: gl.NEAREST,
             wrapS: gl.CLAMP_TO_EDGE,
             wrapT: gl.CLAMP_TO_EDGE
+
         });
-        const textureInfo = {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, oImage);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        return {
             width: oImage.width,
             height: oImage.height,
             texture
         }
-        gl.bindTexture(gl.TEXTURE_2D, textureInfo.texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, oImage);
-        gl.generateMipmap(gl.TEXTURE_2D);
-
-        return textureInfo;
     }
 
     /**
@@ -221,107 +138,81 @@ class Manager {
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        this._mOrtho = m4.ortho(
-            0,
-            gl.canvas.clientWidth / this._zoom.x,
-            gl.canvas.clientHeight / this._zoom.y,
-            0,
-            -1,
-            1
-        );
         this._layers.forEach(l => l.render(this))
     }
 
-    /**
-     * @typedef DrawImageOptions {object}
-     * @property blend {number} blend method 0: normal ; 1: additive
-     * @property alpha {number} opacity : 0: transparent, 1: full opacity
-     * @property xRot {number} rotation pivot coords x
-     * @property yRot {number} rotation pivot coords y
-     * @property angle {number} rotation angle value
-     * @property xGlobal {number}
-     * @property yGlobal {number}
-     * @property wTex {number}
-     * @property hTex {number}
-     *
-     *
-     * @param tex
-     * @param texWidth
-     * @param texHeight
-     * @param dstX
-     * @param dstY
-     * @param dstWidth
-     * @param dstHeight
-     * @param options
-     */
-    drawImage (tex, texWidth, texHeight, dstX, dstY, dstWidth, dstHeight, options = {}) {
+    drawImage (
+        texInfo,
+        srcX, srcY, srcWidth, srcHeight,
+        dstX, dstY, dstWidth, dstHeight,
+        options = {}
+    ) {
+        const texWidth = texInfo.width, texHeight = texInfo.height
+        const tex = texInfo.texture
         const gl = this._gl
-        switch (options.blend) {
-            case 1: {
-                gl.blendFunc(gl.ONE, gl.ONE);
-                break;
-            }
-
-            default: {
-                gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-                break;
-            }
+        const targetWidth = gl.canvas.width, targetHeight = gl.canvas.height
+        if (options.blend === 1) {
+            gl.blendFunc(gl.ONE, gl.ONE);
+        } else {
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         }
-        const textureLocation = this._uniforms.texture
-        const matrixLocation = this._uniforms.matrix
-        const alphaLocation = this._uniforms.alpha
-
-        const fAlpha = options.alpha
-        const fRotation = options.angle || 0
-
+        const nRotation = options.angle || 0
+        if (srcWidth === undefined) {
+            srcWidth = texWidth;
+            srcHeight = texHeight;
+        }
+        if (dstX === undefined) {
+            dstX = srcX;
+            dstY = srcY;
+            srcX = 0;
+            srcY = 0;
+        }
         if (dstWidth === undefined) {
-            dstWidth = texWidth;
+            dstWidth = srcWidth;
+            dstHeight = srcHeight;
         }
 
-        if (dstHeight === undefined) {
-            dstHeight = texHeight;
-        }
+        const mat  = m4.identity();
+        const tmat = m4.identity();
 
-        gl.useProgram(this._programs.drawImage.program);
+        const uniforms = {
+            u_matrix: mat,
+            u_textureMatrix: tmat,
+            u_texture: tex,
+            u_alpha: options.alpha
+        };
 
-        // Setup the attributes for the quad
-        const vao = this._vao
-        gl.bindVertexArray(vao);
+        // these adjust the unit quad to generate texture coordinates
+        // to select part of the src texture
 
-        const textureUnit = 0;
-        // The the shader we're putting the texture on texture unit 0
-        gl.uniform1i(textureLocation, textureUnit);
+        // NOTE: no check is done that srcX + srcWidth go outside of the
+        // texture or are in range in any way. Same for srcY + srcHeight
 
-        // Bind the texture to texture unit 0
-        gl.activeTexture(gl.TEXTURE0 + textureUnit);
-        gl.bindTexture(gl.TEXTURE_2D, tex);
+        m4.translate(tmat, [srcX / texWidth, srcY / texHeight, 0], tmat);
+        m4.scale(tmat, [srcWidth / texWidth, srcHeight / texHeight, 1], tmat);
 
-        // this matrix will convert from pixels to clip space
-        let matrix = m4.copy(this._mOrtho)
-        // translate our quad to dstX, dstY
-        matrix = m4.translate(matrix, v3.create(dstX, dstY, 0));
+        // these convert from pixels to clip space
+        m4.ortho(0, targetWidth, targetHeight, 0, -1, 1, mat)
 
+        // these move and scale the unit quad into the size we want
+        // in the target as pixels
+        m4.translate(mat, [dstX, dstY, 0], mat);
         // Rotation
-        if (fRotation) {
-            matrix = m4.translate(matrix, v3.create(options.xRot, options.yRot, 0));
-            matrix = m4.rotateZ(matrix, fRotation)
-            matrix = m4.translate(matrix, v3.create(-options.xRot, -options.yRot, 0));
+        if (nRotation) {
+            const vPivot = v3.create(options.xRot, options.yRot, 0)
+            const vNegPivot = v3.negate(vPivot)
+            m4.translate(mat, vPivot, mat);
+            m4.rotateZ(mat, nRotation, mat)
+            m4.translate(mat, vNegPivot, mat);
         }
+        m4.scale(mat, [dstWidth, dstHeight, 1], mat);
 
-        // scale our 1 unit quad
-        // from 1 unit to dstWidth, dstHeight units
-        matrix = m4.scale(matrix, v3.create(dstWidth, dstHeight, 1));
-
-        // Set the matrix.
-        gl.uniformMatrix4fv(matrixLocation, false, matrix);
-
-        // set alpha
-        gl.uniform1f(alphaLocation, fAlpha)
-
-        // draw the quad (2 triangles, 6 vertices)
-        const offset = 0;
-        const count = 6;
-        gl.drawArrays(gl.TRIANGLES, offset, count);
+        const p = this._programInfo.drawImage
+        const b = this._bufferInfo.drawImage
+        gl.useProgram(p.program);
+        twgl.setBuffersAndAttributes(gl, p, b);
+        twgl.setUniforms(p, uniforms);
+        twgl.drawBufferInfo(gl, b);
     }
 
     /**

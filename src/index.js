@@ -37,7 +37,7 @@ async function createTorchSprite(oImg) {
     oTorchSpr.y = 100
     oTorchSpr.z = 1
     oTorchSpr.xScale = oTorchSpr.yScale = 3
-    oTorchSpr.rotation = 1
+    oTorchSpr.rotation = 0
     oTorchSpr.xPivot = 16
     oTorchSpr.yPivot = 16
     oTorchSpr.alpha = 1
@@ -83,7 +83,7 @@ let last_time = 0
 function update (time) {
     const t = time - last_time
     last_time = time
-    oAllSprites.torch.rotation = time / 1000
+    // oAllSprites.torch.rotation = time / 1000
     oAllSprites.torch.animation.animate(t)
 }
 

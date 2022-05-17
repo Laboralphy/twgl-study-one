@@ -61,13 +61,13 @@ class SpriteLayer extends Layer {
                     yGlobal,
                     wTex: sprite.width,
                     hTex: sprite.height,
-                    ambiancePigment: [0.15, 0.15, 0.15],
+                    ambiancePigment: [0.85, 0.80, 0.75],
                     lightSources: {
                         active: [true, false, false, false],
-                        position: [[0, 0], [0, 0], [0, 0], [0, 0]],
-                        radiusMin: [100, 0, 0, 0],
-                        radiusMax: [250, 0, 0, 0],
-                        pigment: [[0.2, 0.3, 1], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+                        position: [[116, 116], [0, 0], [0, 0], [0, 0]],
+                        radiusMin: [5 + Math.sin(performance.now() / 200) * 2, 0, 0, 0],
+                        radiusMax: [16 + Math.sin(performance.now() / 220) * 2, 0, 0, 0],
+                        pigment: [[0.45, 0.30, 0.15], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
                     }
                 }
                 oManager.drawImage(

@@ -253,10 +253,12 @@ class Manager {
                 const ls = options.lightSources
                 sFragmentShader = 'drawImageLightSources'
                 uniforms.u_ls_active = ls.active
-                uniforms.u_ls_position = ls.position
-                uniforms.u_ls_pigment = ls.pigment
+                uniforms.u_ls_position = ls.position.flat()
+                uniforms.u_ls_pigment = ls.pigment.flat()
                 uniforms.u_ls_radius_min = ls.radiusMin
                 uniforms.u_ls_radius_max = ls.radiusMax
+                uniforms.u_size = [texWidth, texHeight]
+                uniforms.u_position = [dstX, dstY]
             }
         }
 

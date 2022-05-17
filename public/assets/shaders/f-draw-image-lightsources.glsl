@@ -12,41 +12,62 @@ uniform vec2 u_ls_position[4];
 uniform vec3 u_ls_pigment[4];
 uniform float u_ls_radius_min[4];
 uniform float u_ls_radius_max[4];
+uniform vec2 u_size;
+uniform vec2 u_position;
 
 out vec4 outColor;
 
-float getIntensity(vec2 vPixelPos, uint nLS) {
-    if (!u_ls_active[nLS]) {
-        return 0;
-    }
+float getIntensity(vec2 vPixelPos, int nLS) {
     vec2 lsPos = u_ls_position[nLS];
     vec3 lsPigment = u_ls_pigment[nLS];
     float lsRadiusMin = u_ls_radius_min[nLS];
     float lsRadiusMax = u_ls_radius_max[nLS];
     float nDistance = distance(vPixelPos, lsPos);
-    float nIntensity = max(0.0, min(1.0, (nDistance - lsRadiusMin) / (lsRadiusMax - lsRadiusMin)));
+    return 1.0 - clamp((nDistance - lsRadiusMin) / (lsRadiusMax - lsRadiusMin), 0.0, 1.0);
 }
 
-vec4 getEnlightedPigment(vec4 vOrigPigment, vec3 vLightPigment, float nIntensity) {
-    return vec3(
-        min(1.0, vOrigPigment.r + nIntensity * vLightPigment.r),
-        min(1.0, vOrigPigment.g + nIntensity * vLightPigment.g),
-        min(1.0, vOrigPigment.b + nIntensity * vLightPigment.b),
+vec4 mixPigments(vec4 vOrigPigment, vec4 vLightPigment) {
+    float nIntensity = vLightPigment.a;
+    return vec4(
+        clamp(vOrigPigment.r + nIntensity * vLightPigment.r, 0.0, 1.0),
+        clamp(vOrigPigment.g + nIntensity * vLightPigment.g, 0.0, 1.0),
+        clamp(vOrigPigment.b + nIntensity * vLightPigment.b, 0.0, 1.0),
         vOrigPigment.a
     );
 }
 
-vec4 applyLightSources(vec4 vOrigPigment)
+vec4 applyAmbiantLight(vec4 vOrigPigment) {
+    return vec4(
+        u_amb_pigment.r * vOrigPigment.r,
+        u_amb_pigment.g * vOrigPigment.g,
+        u_amb_pigment.b * vOrigPigment.b,
+        vOrigPigment.a * u_alpha
+    );
+}
+
+vec4 applyLightSources(vec4 vOrigPigment, vec2 vPixelPos) {
+    float nIntensity;
+    vec4 vFinalPigment = vOrigPigment;
+    vec4 vLSPigment;
+    for (int i = 0; i < 4; ++i) {
+        if (u_ls_active[i]) {
+            nIntensity = getIntensity(vPixelPos, i);
+            if (nIntensity > 0.0) {
+                vLSPigment = vec4(u_ls_pigment[i], nIntensity);
+                vFinalPigment = mixPigments(vFinalPigment, vLSPigment);
+            }
+        }
+    }
+    return vFinalPigment;
+}
 
 void main() {
     if (texcoord.x < 0.0 || texcoord.x > 1.0 || texcoord.y < 0.0 || texcoord.y > 1.0) {
         discard;
     }
+    vec2 vPosLocal = vec2(texcoord.x * u_size.x, texcoord.y * u_size.y);
     outColor = texture(u_texture, texcoord);
-    outColor = vec4(
-        u_amb_pigment.r * outColor.r,
-        u_amb_pigment.g * outColor.g,
-        u_amb_pigment.b * outColor.b,
-        outColor.a * u_alpha
-    );
+    outColor = applyAmbiantLight(outColor);
+    outColor = applyLightSources(outColor, u_position + vPosLocal);
+
 }

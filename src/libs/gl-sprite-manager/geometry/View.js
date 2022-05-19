@@ -1,4 +1,5 @@
 const Vector = require('./Vector');
+const Helper = require('./Helper');
 
 /**
  * La vue est une fenetre virtuelle délimitant la zone de vision d'un ecran
@@ -9,6 +10,7 @@ class View {
 		this._position = new Vector(); // position de la vue
 		this._width = 0;
 		this._height = 0;
+		this._boundingRect = {}
 	}
 
 	// difference entre le point de référence de la vue et le coin supérieur gauche
@@ -50,7 +52,7 @@ class View {
 		this.offset = new Vector(this.width >> 1, this.height >> 1);
 	}
 
-	points() {
+	get boundingRect () {
 		let p0 = this._position.sub(this._offset);
 		let p1 = p0.add(new Vector(this._width, this._height));
 		return [p0, p1];

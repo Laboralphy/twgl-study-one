@@ -15,11 +15,16 @@ class SpriteLayer extends Layer {
         this
             ._sprites
             .filter(sprite => {
+                const xSpr = sprite.x - sprite.xRef
+                const ySpr = sprite.y - sprite.yRef
+                const xSpr2 = xSpr + sprite.width - 1
+                const ySpr2 = ySpr + sprite.height - 1
+                const vpp = vp.points()
                 const bVisible = Geometry.Helper.rectInRect(
-                    sprite.x - sprite.xRef,
-                    sprite.y - sprite.yRef,
-                    sprite.width,
-                    sprite.height,
+                    xSpr,
+                    ySpr,
+                    xSpr2,
+                    ySpr,
                     vpx,
                     vpy,
                     vp.width,
@@ -63,11 +68,11 @@ class SpriteLayer extends Layer {
                     hTex: sprite.height,
                     ambiancePigment: [0.85, 0.80, 0.75],
                     lightSources: {
-                        active: [true, false, false, false],
-                        position: [[116, 116], [0, 0], [0, 0], [0, 0]],
+                        active: [true, true, false, false],
+                        position: [[116, 116], [100, 100], [0, 0], [0, 0]],
                         radiusMin: [5 + Math.sin(performance.now() / 200) * 2, 0, 0, 0],
-                        radiusMax: [16 + Math.sin(performance.now() / 220) * 2, 0, 0, 0],
-                        pigment: [[0.45, 0.30, 0.15], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+                        radiusMax: [16 + Math.sin(performance.now() / 220) * 2, 16, 0, 0],
+                        pigment: [[0.45, 0.30, 0.15], [0, 0, 0.4], [0, 0, 0], [0, 0, 0]]
                     }
                 }
                 oManager.drawImage(

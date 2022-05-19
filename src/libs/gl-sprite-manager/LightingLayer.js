@@ -1,6 +1,6 @@
 import Layer from "./Layer";
 
-class LightLayer extends Layer {
+class LightingLayer extends Layer {
     constructor() {
         super()
         this._ambiance = {
@@ -17,6 +17,12 @@ class LightLayer extends Layer {
     get ambiance () {
         return this._ambiance
     }
+
+    getVisibleLightSources () {
+        const vbr = this.view.boundingRect
+        const aVisibleLightSources = this._lightSources.filter(ls => )
+
+    }
 }
 
-export default LightLayer
+export default LightingLayer

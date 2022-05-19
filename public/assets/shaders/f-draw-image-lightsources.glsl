@@ -2,16 +2,18 @@
 
 precision highp float;
 
+#define LIGHTSOURCES_COUNT 4
+
 in vec2 texcoord;
 
 uniform sampler2D u_texture;
 uniform float u_alpha;
 uniform vec3 u_amb_pigment;
-uniform bool u_ls_active[4];
-uniform vec2 u_ls_position[4];
-uniform vec3 u_ls_pigment[4];
-uniform float u_ls_radius_min[4];
-uniform float u_ls_radius_max[4];
+uniform bool u_ls_active[LIGHTSOURCES_COUNT];
+uniform vec2 u_ls_position[LIGHTSOURCES_COUNT];
+uniform vec3 u_ls_pigment[LIGHTSOURCES_COUNT];
+uniform float u_ls_radius_min[LIGHTSOURCES_COUNT];
+uniform float u_ls_radius_max[LIGHTSOURCES_COUNT];
 uniform vec2 u_size;
 uniform vec2 u_position;
 
@@ -49,13 +51,15 @@ vec4 applyLightSources(vec4 vOrigPigment, vec2 vPixelPos) {
     float nIntensity;
     vec4 vFinalPigment = vOrigPigment;
     vec4 vLSPigment;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < LIGHTSOURCES_COUNT; ++i) {
         if (u_ls_active[i]) {
             nIntensity = getIntensity(vPixelPos, i);
             if (nIntensity > 0.0) {
                 vLSPigment = vec4(u_ls_pigment[i], nIntensity);
                 vFinalPigment = mixPigments(vFinalPigment, vLSPigment);
             }
+        } else {
+            break;
         }
     }
     return vFinalPigment;
@@ -69,5 +73,4 @@ void main() {
     outColor = texture(u_texture, texcoord);
     outColor = applyAmbiantLight(outColor);
     outColor = applyLightSources(outColor, u_position + vPosLocal);
-
 }
